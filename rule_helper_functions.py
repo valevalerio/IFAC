@@ -308,7 +308,7 @@ def fairness_rules_to_dataframe(fairness_rules):
     return dataframe_with_rules
 
 def convert_to_apriori_format(X):
-    list_of_dicts_format = X.to_dict('record')
+    list_of_dicts_format = X.to_dict('records')
     list_of_lists = []
     for dictionary in list_of_dicts_format:
         one_entry = set()

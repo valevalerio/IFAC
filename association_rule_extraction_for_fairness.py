@@ -4,7 +4,7 @@ from Rule import *
 from rule_helper_functions import calculate_slift_and_elift, get_instances_covered_by_rule_base, convert_to_apriori_format
 
 
-def extract_class_association_rules_in_predictions(train_data_dataset, predictions, class_items, protected_itemsets, reference_group, sensitive_attributes):
+def extract_class_association_rules_in_predictions(train_data_dataset, predictions, class_items, protected_itemsets, reference_group, sensitive_attributes, min_support=0.05, max_length=4):
     train_data = train_data_dataset.descriptive_data
     decision_label = train_data_dataset.decision_attribute
 
@@ -15,12 +15,12 @@ def extract_class_association_rules_in_predictions(train_data_dataset, predictio
     new_train_data_dataset = deepcopy(train_data_dataset)
     new_train_data_dataset.descriptive_data = train_data_without_ground_truth_but_with_predictions
     #class_rules = apply_apriori_algorithm_and_extract_class_rules(new_train_data_dataset, class_items, protected_itemsets, reference_group)
-    class_rules = apply_apriori_to_find_unfair_patterns_per_pd_itemset(new_train_data_dataset, class_items, protected_itemsets, reference_group, sensitive_attributes)
+    class_rules = apply_apriori_to_find_unfair_patterns_per_pd_itemset(new_train_data_dataset, class_items, protected_itemsets, reference_group, sensitive_attributes, min_support=min_support, max_length=max_length)
 
     return class_rules
 
 
-def apply_apriori_to_find_unfair_patterns_per_pd_itemset(train_data_dataset, class_items, protected_itemsets, reference_group, sensitive_attributes):
+def apply_apriori_to_find_unfair_patterns_per_pd_itemset(train_data_dataset, class_items, protected_itemsets, reference_group, sensitive_attributes, min_support=0.05, max_length=4):
     train_data = train_data_dataset.descriptive_data
     class_rules_per_protected_itemset = {}
 
@@ -32,9 +32,9 @@ def apply_apriori_to_find_unfair_patterns_per_pd_itemset(train_data_dataset, cla
             data_belonging_to_prot_itemset = data_belonging_to_prot_itemset.drop(columns=sensitive_attributes)
 
             data_apriori_format = convert_to_apriori_format(data_belonging_to_prot_itemset)
-            associations = apriori(transactions=data_apriori_format, min_support=0.01,
+            associations = apriori(transactions=data_apriori_format, min_support=min_support,
                                    min_confidence=0.85, min_lift=1.0, min_length=2,
-                                   max_length=6)
+                                   max_length=max_length)
 
             list_of_associations = list(associations)
             class_rules_for_prot_itemset = extract_class_rules_for_one_protected_itemset(prot_itemset, list_of_associations, class_items,
