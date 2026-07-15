@@ -28,7 +28,7 @@ class Rule:
         output_string = "("
         counter = 1
         for rule_key in self.rule_base.keys():
-            output_string += rule_key + " = " + self.rule_base[rule_key]
+            output_string += rule_key + " = " + str(self.rule_base[rule_key])
             if counter != len(self.rule_base):
                 output_string += " AND "
             counter += 1
@@ -49,7 +49,7 @@ class Rule:
         output_string = "Rule: ("
         counter = 1
         for rule_key in self.rule_base.keys():
-            output_string += self.rule_base[rule_key]
+            output_string += str(self.rule_base[rule_key])
             if counter != len(self.rule_base):
                 output_string += " AND "
             counter += 1

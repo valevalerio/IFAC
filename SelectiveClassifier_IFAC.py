@@ -15,7 +15,7 @@ class IFAC:
         self.negative_label = negative_label
         self.positive_label = positive_label
         self.reference_group_dict_list = reference_group_dict
-        self.minimum_slift = 0.3
+        self.minimum_slift = min_slift if min_slift is not None else 0.3
         self.max_pvalue_slift = 0.01 #0.01
 
         self.reject_rules_per_prot_itemset = self.construct_protected_itemset_and_their_reject_rules_dict()
@@ -51,7 +51,7 @@ class IFAC:
         #could do a more advanced thing here, also taking confidence and everything into account
         for pd_itemset, rules in self.class_rules_per_prot_itemset.items():
             if pd_itemset.dict_notation != {}:
-                significant_rules_with_high_slift = [rule for rule in rules if (((rule.confidence - rule.slift) < 0.5) & (rule.slift_p_value < self.max_pvalue_slift))]
+                significant_rules_with_high_slift = [rule for rule in rules if (rule.slift_p_value < self.max_pvalue_slift) & (((rule.confidence - rule.slift) < 0.5) | (abs(rule.slift) >= self.minimum_slift))]
                 rules_with_high_slift_no_subrules = self.remove_rules_that_are_subsets_from_other_rules(significant_rules_with_high_slift)
                 reject_rules_per_prot_itemset[pd_itemset] = rules_with_high_slift_no_subrules
                 #this part is written to only have 'favouritism' rules for reference group
@@ -137,9 +137,9 @@ class IFAC:
 
     #this function will return None if none of the reject rules applies
     def check_which_of_reject_rules_in_dict_applies(self, prot_itemset, instance, prediction_for_instance):
-        corresponding_reject_rules = self.reject_rules_per_prot_itemset[prot_itemset]
+        corresponding_reject_rules = self.reject_rules_per_prot_itemset.get(prot_itemset)
 
-        if len(corresponding_reject_rules) == 0:
+        if corresponding_reject_rules is None or len(corresponding_reject_rules) == 0:
             return None
 
         for rule in corresponding_reject_rules:
