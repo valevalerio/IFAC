@@ -1,4 +1,4 @@
-
+import numpy as np
 class Reject:
     def __init__(self, rejected_instance, reject_threat, prediction_without_reject, prediction_probability, alternative_prediction):
         self.rejected_instance = rejected_instance
@@ -12,9 +12,8 @@ class Reject:
         reject_str_pres += self.reject_threat + "-based Reject for this instance\n"
         reject_str_pres += str(self.rejected_instance.to_dict())
         reject_str_pres += "\nPrediction that would have been made: " + str(self.prediction_without_reject)
-        reject_str_pres += "\nPrediction Probability: " + str(self.prediction_probability)
+        reject_str_pres += "\nPrediction Probability: " + str(np.round(self.prediction_probability,2))
         return reject_str_pres
-
 class SchreuderReject(Reject):
     def __init__(self, rejected_instance, prediction_without_reject, prediction_probability):
         Reject.__init__(self, rejected_instance, "Schreuder", prediction_without_reject,  prediction_probability, alternative_prediction=None)
@@ -40,6 +39,17 @@ class FairnessReject(Reject):
             str_pres += "\nSituation Testing Score: " + str(self.sit_test_summary)
         return str_pres
 
+    def silent_str(self):
+        """
+        This new method is used to print the reject information without the prediction that would have been made and its probability, which is useful for test with human-in-the-loop, where the prediction is not known to the human (the black-box classifier has abstained from making a prediction, and the human is asked to make a decision instead).
+        The silent_str method returns a string representation of the reject information without revealing the prediction that would have been made and its probability, it reveals the rejected instance, it says the black-box classifier has abstained from making a prediction, it indicates the sensitive attributes of the rejected instance. and then the 
+        """
+        reject_str_pres = "\n______________________________\n"
+        reject_str_pres += self.reject_threat + "-based Reject for this instance\n"
+        reject_str_pres += str(self.rejected_instance.to_dict())
+        # reject_str_pres += "\nPrediction that would have been made: " + str(self.prediction_without_reject)
+        # reject_str_pres += "\nPrediction Probability: " + str(np.round(self.prediction_probability,2))
+        return reject_str_pres
 
 class FairnessRejectWithoutIntervention(Reject):
     def __init__(self, rejected_instance, prediction_without_reject, prediction_probability, rule_reject_is_based_upon, opposite_prediction, sit_test_summary=None):

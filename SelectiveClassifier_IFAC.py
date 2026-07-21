@@ -66,6 +66,67 @@ class IFAC:
         return reject_rules_per_prot_itemset
 
 
+    def diagnose_candidate_rules(self):
+        """Read-only audit of every candidate rule in class_rules_per_prot_itemset: which guard(s) it
+        passed/failed, and -- for rules that passed the guard -- whether it was still dropped downstream
+        (as a redundant subset of a more specific rule, or as a favouritism rule for a non-reference
+        group). Mirrors construct_protected_itemset_and_their_reject_rules_dict's logic exactly (reuses
+        remove_rules_that_are_subsets_from_other_rules) without altering self.reject_rules_per_prot_itemset.
+        Returns a list of dicts, one per candidate rule.
+        """
+        rows = []
+        for pd_itemset, rules in self.class_rules_per_prot_itemset.items():
+            if pd_itemset.dict_notation == {}:
+                continue
+            is_reference_group = pd_itemset.dict_notation in self.reference_group_dict_list
+
+            guard_flags = []
+            for rule in rules:
+                passes_significance = rule.slift_p_value < self.max_pvalue_slift
+                passes_absolute_gap = (rule.confidence - rule.slift) < 0.5
+                passes_magnitude = abs(rule.slift) >= self.minimum_slift
+                guard_flags.append((passes_significance, passes_absolute_gap, passes_magnitude))
+
+            guard_passing_rules = [rule for rule, (sig, gap, mag) in zip(rules, guard_flags) if sig and (gap or mag)]
+            survivors_after_subset_pruning = {id(r) for r in self.remove_rules_that_are_subsets_from_other_rules(guard_passing_rules)}
+
+            for rule, (passes_significance, passes_absolute_gap, passes_magnitude) in zip(rules, guard_flags):
+                passes_guard = passes_significance and (passes_absolute_gap or passes_magnitude)
+                is_positive_consequence = rule.rule_consequence[self.decision_attribute] == self.positive_label
+
+                dropped_as_subset = passes_guard and id(rule) not in survivors_after_subset_pruning
+                dropped_as_favouritism = (
+                    passes_guard and not dropped_as_subset and not is_reference_group and is_positive_consequence
+                )
+                included = passes_guard and not dropped_as_subset and not dropped_as_favouritism
+
+                if not passes_significance:
+                    reason = "dropped: not significant (slift_p_value >= max_pvalue_slift)"
+                elif not (passes_absolute_gap or passes_magnitude):
+                    reason = "dropped: neither absolute-gap (confidence - slift < 0.5) nor magnitude (|slift| >= min_slift) threshold met"
+                elif dropped_as_subset:
+                    reason = "dropped: subset of a more specific surviving rule"
+                elif dropped_as_favouritism:
+                    reason = "dropped: positive-consequence rule for a non-reference group (favouritism filter)"
+                else:
+                    reason = "included"
+
+                rows.append({
+                    "group": dict(pd_itemset.dict_notation),
+                    "is_reference_group": is_reference_group,
+                    "rule_base": dict(rule.rule_base),
+                    "rule_consequence": rule.rule_consequence[self.decision_attribute],
+                    "confidence": rule.confidence,
+                    "slift": rule.slift,
+                    "slift_p_value": rule.slift_p_value,
+                    "passes_significance": passes_significance,
+                    "passes_absolute_gap": passes_absolute_gap,
+                    "passes_magnitude": passes_magnitude,
+                    "included": included,
+                    "reason": reason,
+                })
+        return rows
+
     def make_sens_attribute_combinations(self):
         sens_attribute_combinations = []
 
