@@ -83,7 +83,7 @@ def extract_instances_with_high_disc_score(situation_tester, validation_data_cov
             sit_info = situation_tester.instance_is_favoured_based_on_sit_test(instance, sens_attributes_instance)
             disc_info = "Favoured" if sit_info.favoured else "Neutral"
         else:
-            sit_info = situation_tester.instance_is_discriminated_based_on_sit_test(instance)
+            sit_info = situation_tester.instance_is_discriminated_based_on_sit_test(instance, sens_attributes_instance)
             disc_info = "Discriminated" if sit_info.discriminated else "Neutral"
         if disc_info != "Neutral":
             high_disc_scores_indices.append(index)

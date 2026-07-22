@@ -161,7 +161,7 @@ class IFAC:
             return True, reject
         else:
             alternative_prediction = self.positive_label if prediction_for_instance == self.negative_label else self.negative_label
-            reject = FairnessRejectWithIntervention(descriptive_format_instance, prediction_for_instance, prediction_probability_for_instance, rule_to_reject_upon, alternative_prediction)
+            reject = FairnessRejectWithIntervention(descriptive_format_instance, prediction_for_instance, prediction_probability_for_instance, rule_to_reject_upon, alternative_prediction, sit_test_summary=sit_test_info)
             return True, reject
 
 
@@ -183,7 +183,7 @@ class IFAC:
         if (rule_consequence_outcome == self.positive_label):
             return self.situation_test.instance_is_favoured_based_on_sit_test(numerical_format_test_instance, sens_attributes_of_test_instance, rule_to_reject_upon.rule_base)
         else:
-            return self.situation_test.instance_is_discriminated_based_on_sit_test(numerical_format_test_instance, rule_to_reject_upon.rule_base)
+            return self.situation_test.instance_is_discriminated_based_on_sit_test(numerical_format_test_instance, sens_attributes_of_test_instance, rule_to_reject_upon.rule_base)
 
     def check_if_instance_should_be_rejected_based_on_any_of_sens_char_reject_rules(self, descriptive_format_test_instance,  prediction_for_instance):
         for sens_attribute_combination in self.sens_attribute_combinations:

@@ -31,14 +31,6 @@ class SituationTesting():
         return numerical_format_of_falling_within_rule_base_data
 
 
-    def divide_by_protected_membership_according_to_fixed_reference_group(self, relevant_data):
-        relevant_data = relevant_data.loc[:, relevant_data.columns != self.train_data.decision_attribute]
-        complete_reference_group_data = self.get_data_from_fixed_ref_group(relevant_data)
-        index_is_in_reference_group = relevant_data.index.isin(complete_reference_group_data.index)
-        non_reference_group_data = relevant_data[~index_is_in_reference_group]
-
-        return complete_reference_group_data, non_reference_group_data
-
     def get_data_from_fixed_ref_group(self, relevant_data):
         reference_group_data = deepcopy(relevant_data)
         list_of_reference_group_data = []
@@ -57,10 +49,11 @@ class SituationTesting():
 
         reference_group_data = self.get_data_from_fixed_ref_group(relevant_data)
 
-        index_is_in_reference_group = relevant_data.index.isin(reference_group_data.index)
-        non_reference_group_data = relevant_data[~index_is_in_reference_group]
+        same_category_group_data = deepcopy(relevant_data)
+        for key, value in sens_attribute_values_of_test_instance.items():
+            same_category_group_data = same_category_group_data[same_category_group_data[key] == value]
 
-        return reference_group_data, non_reference_group_data
+        return reference_group_data, same_category_group_data
 
 
     def find_nearest_protected_and_unprotected_neighbours(self, test_instance, reference_group_data, non_reference_group_data):
@@ -93,14 +86,14 @@ class SituationTesting():
         else:
             return 0
 
-    def instance_is_discriminated_based_on_sit_test(self, test_instance, rule_to_search_within=None):
+    def instance_is_discriminated_based_on_sit_test(self, test_instance, sens_attributes_instance, rule_to_search_within=None):
         if rule_to_search_within != None:
             relevant_data_to_run_sit_testing = self.extract_data_falling_within_rule_base(rule_to_search_within)
         else:
             relevant_data_to_run_sit_testing = self.train_data.numerical_data
 
-        reference_group_data, non_reference_group_data = self.divide_by_protected_membership_according_to_fixed_reference_group(
-            relevant_data_to_run_sit_testing)
+        reference_group_data, non_reference_group_data = self.divide_by_protected_membership_according_to_instances_sens_characteristics(
+            sens_attributes_instance, relevant_data_to_run_sit_testing)
 
         nearest_prot_neighbours, nearest_unprot_neighbours = self.find_nearest_protected_and_unprotected_neighbours(test_instance, reference_group_data, non_reference_group_data)
         pos_decision_ratio_prot = self.calc_pos_decision_ratio(nearest_prot_neighbours)
@@ -108,7 +101,9 @@ class SituationTesting():
 
         disc_score = pos_decision_ratio_unprot - pos_decision_ratio_prot
 
-        sit_test_info = SituationTestingInfo(disc_score, self.k, self.threshold, nearest_prot_neighbours, nearest_unprot_neighbours)
+        sit_test_info = SituationTestingInfo(disc_score, self.k, self.threshold, nearest_prot_neighbours, nearest_unprot_neighbours,
+                                             sensitive_attributes=self.sensitive_attributes, decision_attribute=self.train_data.decision_attribute,
+                                             desirable_label=self.train_data.desirable_label)
         return sit_test_info
 
     def instance_is_favoured_based_on_sit_test(self, test_instance, sens_attributes_instance, rule_to_search_within=None):
@@ -127,17 +122,23 @@ class SituationTesting():
         favo_score = pos_decision_ratio_unprot - pos_decision_ratio_prot
 
         sit_test_info = SituationTestingInfo(favo_score, self.k, self.threshold, nearest_prot_neighbours,
-                                             nearest_unprot_neighbours, from_favoured_group=True)
+                                             nearest_unprot_neighbours, from_favoured_group=True,
+                                             sensitive_attributes=self.sensitive_attributes, decision_attribute=self.train_data.decision_attribute,
+                                             desirable_label=self.train_data.desirable_label)
         return sit_test_info
 
 
 
 class SituationTestingInfo:
 
-    def __init__(self, discrimination_score, k, threshold, closest_prot_neighbours, closest_unprot_neighbours, from_favoured_group = False):
+    def __init__(self, discrimination_score, k, threshold, closest_prot_neighbours, closest_unprot_neighbours, from_favoured_group = False,
+                 sensitive_attributes = None, decision_attribute = None, desirable_label = None):
         self.disc_score = discrimination_score
         self.k = k
         self.threshold = threshold
+        self.sensitive_attributes = sensitive_attributes
+        self.decision_attribute = decision_attribute
+        self.desirable_label = desirable_label
 
         if from_favoured_group:
             self.discriminated = False
