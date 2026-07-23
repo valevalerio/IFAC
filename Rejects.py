@@ -14,6 +14,14 @@ class Reject:
         reject_str_pres += "\nPrediction that would have been made: " + str(self.prediction_without_reject)
         reject_str_pres += "\nPrediction Probability: " + str(np.round(self.prediction_probability,2))
         return reject_str_pres
+
+    def to_structured_dict(self):
+        """Numeric/categorical fields for CSV export, as a flat dict - the structured
+        counterpart to __str__()/silent_str(). Base case has nothing beyond what's already
+        a plain column elsewhere (bb_prediction, reject_type already tell you the flipped
+        label and whether it's the WithIntervention case); subclasses with rule/
+        situation-testing data override this to add those fields."""
+        return {}
 class SchreuderReject(Reject):
     def __init__(self, rejected_instance, prediction_without_reject, prediction_probability):
         Reject.__init__(self, rejected_instance, "Schreuder", prediction_without_reject,  prediction_probability, alternative_prediction=None)
@@ -75,7 +83,9 @@ class FairnessReject(Reject):
         rule_lift = self.rule_reject_is_based_upon.lift
         reject_str_pres += (
             f"\nThe discriminated subgroup for the category {own_category} is described as: {similarity_basis} "
-            f"(rule confidence: {rule_confidence*100:.1%}, lift: {rule_lift:.2f})"
+            # confidence is already a 0-1 fraction; :.1% multiplies by 100 itself, so a
+            # `rule_confidence*100` here would double-scale it (0.877 -> "8770.0%").
+            f"(rule confidence: {rule_confidence:.1%}, lift: {rule_lift:.2f})"
         )
 
         reject_str_pres += self._sit_test_paragraph(reference_category, reference_neighbours)
@@ -90,6 +100,21 @@ class FairnessReject(Reject):
         n_total = len(neighbours)
 
         return f"\nSimilar instances with {category_label} that had loan granted {n_granted}/{n_total}."
+
+    def to_structured_dict(self):
+        """The rule this reject is based on, as plain values instead of buried in
+        silent_str()'s/__str__()'s formatted paragraph - support/confidence/lift/slift plus
+        which conditions (rule_base) actually fired, so "does this applicant match the rule
+        that triggered the reject" is a column lookup instead of a text-parsing job."""
+        out = super().to_structured_dict()
+        out.update(
+            rule_conditions=dict(self.rule_reject_is_based_upon.rule_base),
+            rule_support=self.rule_reject_is_based_upon.support,
+            rule_confidence=self.rule_reject_is_based_upon.confidence,
+            rule_lift=self.rule_reject_is_based_upon.lift,
+            rule_slift=self.rule_reject_is_based_upon.slift,
+        )
+        return out
 
 class FairnessRejectWithoutIntervention(FairnessReject):
     def __init__(self, rejected_instance, prediction_without_reject, prediction_probability, rule_reject_is_based_upon, opposite_prediction, sit_test_summary=None):
